@@ -43,8 +43,11 @@
   h1{margin:0;font-size:42px;font-weight:700;line-height:1.24;
      letter-spacing:-.03em;text-wrap:balance}
   .rule{width:54px;height:2px;background:var(--pine);opacity:.75}
-  .lede{margin:0;color:var(--ink-2);font-size:16.5px;font-weight:300;
-        line-height:1.8;max-width:44ch}
+  .guide{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+  .guide h2{margin:0;font-size:21px;font-weight:600;letter-spacing:-.02em;
+            line-height:1.5;color:var(--pine-deep)}
+  .guide p{margin:0;color:var(--ink-2);font-size:16.5px;font-weight:300;
+           line-height:1.8;max-width:44ch}
 
   /* ── 내려받기 ── */
   .files{display:flex;flex-direction:column;gap:0;
@@ -111,9 +114,12 @@
 <div class="wrap">
 
   <header>
-    <h1>개역한글판</h1>
+    <h1>성경 개역한글판</h1>
     <div class="rule"></div>
-    <p class="lede">위키문헌에 공개된 본문을 절 단위로 정리한 판본입니다. 아래를 눌러 내려받으세요.</p>
+    <div class="guide">
+      <h2>말씀을 늘 가까이 두십시오</h2>
+      <p>성경 예순여섯 권 전체를 한 파일에 담았습니다. 아래를 눌러 받으신 뒤, 어디에 계시든 말씀을 펴 보십시오.</p>
+    </div>
   </header>
 
   <div class="files">
@@ -167,8 +173,7 @@
   </section>
 
   <footer>
-    본문 출처 — <a href="https://ko.wikisource.org/wiki/개역한글판">위키문헌 개역한글판</a>.
-    원문은 저자 사망 후 60년이 지나 퍼블릭 도메인으로 공개되어 있습니다.
+    본문 출처 — <a href="https://ko.wikisource.org/wiki/개역한글판">위키문헌 개역한글판</a>
   </footer>
 
 </div>
