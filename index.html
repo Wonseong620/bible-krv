@@ -53,6 +53,23 @@
   dt{color:var(--ink);font-weight:600;white-space:nowrap}
   dd{margin:0;font-variant-numeric:tabular-nums}
 
+  .share{display:flex;align-items:center;gap:20px;background:var(--surface);
+         border:1.5px solid var(--line);border-radius:10px;padding:18px}
+  /* QR 은 어느 테마에서든 흰 바탕이어야 인식된다 */
+  .share img{flex:none;width:132px;height:auto;background:#fff;
+             border-radius:6px;padding:6px;display:block}
+  .share .info{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .share .url{font-size:14.5px;color:var(--accent);font-weight:700;
+              word-break:break-all;line-height:1.4}
+  .share .say{font-size:14px;color:var(--ink-2);line-height:1.5}
+  .share a.dl{font-size:13.5px;color:var(--ink-3);text-decoration:underline;
+              text-underline-offset:3px;width:fit-content}
+  .share a.dl:hover{color:var(--accent)}
+  @media (max-width:439px){
+    .share{flex-direction:column;align-items:flex-start;gap:14px}
+    .share img{width:160px;align-self:center}
+  }
+
   .note{border-left:3px solid var(--accent);padding:2px 0 2px 14px;
         font-size:14.5px;color:var(--ink-2);line-height:1.6;
         display:flex;flex-direction:column;gap:8px}
@@ -101,6 +118,18 @@
       </span>
     </a>
   </div>
+
+  <section>
+    <h2>이 페이지 알려주기</h2>
+    <div class="share">
+      <img src="qr.png" alt="이 페이지 주소를 담은 QR 코드">
+      <span class="info">
+        <span class="url">wonseong620.github.io/bible-krv</span>
+        <span class="say">QR을 찍거나 위 주소를 알려주시면 됩니다.</span>
+        <a class="dl" href="qr.png" download="개역한글판_QR.png">QR 이미지 내려받기</a>
+      </span>
+    </div>
+  </section>
 
   <section>
     <h2>수록 범위</h2>
