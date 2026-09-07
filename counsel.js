@@ -3,6 +3,7 @@ const form = document.querySelector('#chat-form');
 const input = document.querySelector('#message');
 const send = document.querySelector('#send');
 const feedback = document.querySelector('#feedback');
+const generationStatus = document.querySelector('#generation-status');
 const messages = document.querySelector('#messages');
 const welcome = document.querySelector('#welcome');
 const reset = document.querySelector('#reset');
@@ -67,7 +68,8 @@ form.addEventListener('submit', async event => {
   reset.hidden = true;
   welcome.hidden = true;
   const userMessage = appendMessage('user', content);
-  feedback.textContent = '답변을 생성하고 있습니다';
+  feedback.textContent = '';
+  generationStatus.textContent = '답변을 생성하고 있습니다';
   const dots = document.createElement('span');
   dots.className = 'typing-dots';
   dots.setAttribute('aria-hidden', 'true');
@@ -76,7 +78,7 @@ form.addEventListener('submit', async event => {
     dot.textContent = '.';
     dots.append(dot);
   }
-  feedback.append(dots);
+  generationStatus.append(dots);
   form.setAttribute('aria-busy', 'true');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 165000);
@@ -106,6 +108,7 @@ form.addEventListener('submit', async event => {
     feedback.textContent = error.name === 'AbortError' ? '응답이 지연되고 있습니다. 입력한 내용은 남아 있으니 다시 시도해 주세요.' : error instanceof TypeError ? '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.' : error.message;
   } finally {
     clearTimeout(timeout);
+    generationStatus.replaceChildren();
     busy = false;
     setSuggestionBusy(false);
     form.removeAttribute('aria-busy');
