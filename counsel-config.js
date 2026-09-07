@@ -3,5 +3,5 @@
 window.COUNSEL_CONFIG = {
   endpoint: ['127.0.0.1', 'localhost'].includes(location.hostname)
     ? '/api/chat'
-    : 'https://otherwise-comfortable-something-hudson.trycloudflare.com/api/chat',
+    : 'https://portal-hook-teams-unix.trycloudflare.com/api/chat',
 };
