@@ -14,10 +14,8 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 try:
     from .quota import Quota, QuotaExceeded
-    from .trends import classify
 except ImportError:
     from quota import Quota, QuotaExceeded
-    from trends import classify
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL = os.environ.get('COUNSEL_MODEL', 'qwen3:14b')
@@ -222,7 +220,7 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError,UnicodeError,socket.timeout): return self.json(400,{'error':'요청 형식이나 대화 길이를 확인해 주세요. 새 대화를 시작할 수 있습니다.'})
         if not LOCK.acquire(blocking=False): return self.json(429,{'error':'다른 답변을 작성 중입니다. 잠시 후 다시 시도해 주세요.'})
         try:
-            result = QUOTA.run(lambda: counsel(rows), labels=classify(rows[0]['content']) if len(rows)==1 else None)
+            result = QUOTA.run(lambda: counsel(rows), question=rows[-1]['content'])
             result['quota'] = QUOTA.status()
             self.json(200,result)
         except QuotaExceeded:

@@ -1,4 +1,4 @@
-"""Daily successful-generation quota. No conversations or user identifiers stored."""
+"""Daily quota and a rolling window of 100 completed question/reply pairs."""
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -43,11 +43,12 @@ class Quota:
             result['updated_at'] = self.clock().astimezone(TIMEZONE).isoformat()
             return result
 
-    def run(self, generate, labels=None):
+    def run(self, generate, question=None):
         # Hold a single writer transaction until generation completes. WAL readers
         # (health/status) remain available. Failure or process exit rolls back.
         conn = sqlite3.connect(self.path, timeout=1)
         try:
+            conn.execute('PRAGMA secure_delete=ON')
             conn.execute('BEGIN IMMEDIATE')
             day = self.day().isoformat()
             row = conn.execute('SELECT completed FROM daily_responses WHERE day=?', (day,)).fetchone()
@@ -58,9 +59,16 @@ class Quota:
             conn.execute('INSERT OR IGNORE INTO daily_responses(day, completed) VALUES (?,0)', (day,))
             updated = conn.execute('UPDATE daily_responses SET completed=completed+1 WHERE day=? AND completed<?', (day,LIMIT))
             if updated.rowcount != 1: raise QuotaExceeded()
-            if labels:
-                trends.record(conn, day, labels)
+            if question is not None:
+                if not isinstance(question, str) or not isinstance(result, dict) or not isinstance(result.get('reply'), str):
+                    raise ValueError('Invalid exchange')
+                trends.record(conn, self.clock().astimezone(TIMEZONE).isoformat(), question, result['reply'])
             conn.commit()
+            # Clear deleted content from the WAL when no reader holds a snapshot.
+            try:
+                conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+            except sqlite3.Error:
+                pass  # A checkpoint failure must not turn a committed response into a retry.
             return result
         except BaseException:
             conn.rollback()

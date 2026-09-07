@@ -32,19 +32,25 @@ def classify(text):
 
 
 def initialize(conn):
-    conn.execute('CREATE TABLE IF NOT EXISTS daily_trends (day TEXT NOT NULL, kind TEXT NOT NULL, label TEXT NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(day,kind,label))')
+    conn.execute('PRAGMA secure_delete=ON')
+    conn.execute('DROP TABLE IF EXISTS daily_trends')
+    conn.execute('CREATE TABLE IF NOT EXISTS recent_exchanges (id INTEGER PRIMARY KEY AUTOINCREMENT, completed_at TEXT NOT NULL, question TEXT NOT NULL, reply TEXT NOT NULL)')
+    conn.execute('DELETE FROM recent_exchanges WHERE id NOT IN (SELECT id FROM recent_exchanges ORDER BY id DESC LIMIT 100)')
 
 
-def record(conn,day,labels):
-    for kind,vocabulary in (('topic',TOPICS),('keyword',KEYWORDS)):
-        for label in set(labels.get(kind,[])):
-            if label not in vocabulary: continue
-            conn.execute('INSERT INTO daily_trends VALUES (?,?,?,1) ON CONFLICT(day,kind,label) DO UPDATE SET count=count+1',(day,kind,label))
+def record(conn, completed_at, question, reply):
+    conn.execute('INSERT INTO recent_exchanges(completed_at,question,reply) VALUES (?,?,?)', (completed_at,question,reply))
+    conn.execute('DELETE FROM recent_exchanges WHERE id NOT IN (SELECT id FROM recent_exchanges ORDER BY id DESC LIMIT 100)')
 
 
-def read(conn,day):
-    result={'date':day,'minimum':MIN_COUNT,'topics':[],'keywords':[]}
+def read(conn, day):
+    # Derive fixed-vocabulary counts in memory. Never persist labels or expose text.
+    counts = {'topic':{}, 'keyword':{}}
+    for (question,) in conn.execute('SELECT question FROM recent_exchanges ORDER BY id DESC LIMIT 100'):
+        for kind, labels in classify(question).items():
+            for label in labels:
+                counts[kind][label] = counts[kind].get(label, 0) + 1
+    result = {'date':day, 'minimum':MIN_COUNT, 'window':100, 'topics':[], 'keywords':[]}
     for kind,key in (('topic','topics'),('keyword','keywords')):
-        rows=conn.execute('SELECT label FROM daily_trends WHERE day=? AND kind=? AND count>=? ORDER BY count DESC, label ASC LIMIT 10',(day,kind,MIN_COUNT))
-        result[key]=[r[0] for r in rows]
+        result[key] = [label for label,count in sorted(counts[kind].items(),key=lambda item:(-item[1],item[0])) if count >= MIN_COUNT][:10]
     return result
