@@ -294,8 +294,10 @@ async function loadTrends() {
     if (!Array.isArray(data.keywords) || !data.keywords.every(item => typeof item === 'string')) throw new Error();
     list.replaceChildren();
     for (const label of data.keywords.slice(0, 9)) {
-      const item = document.createElement('li'); item.textContent = label; list.append(item);
+      const item = document.createElement('li'); item.textContent = label;
+      item.style.setProperty('--rank-index', list.children.length); list.append(item);
     }
+    animateRanks();
     empty.hidden = list.children.length > 0;
     empty.textContent = '아직 이야기가 모이고 있어요.';
     const date = new Date(data.updated_at);
@@ -312,3 +314,12 @@ async function loadTrends() {
 loadTrends();
 setInterval(() => { if (!document.hidden) loadTrends(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadTrends(); });
+
+function animateRanks() {
+  const list = document.querySelector('#top-keywords');
+  if (document.hidden || !list.children.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  list.classList.remove('reveal-ranks');
+  void list.offsetWidth;
+  list.classList.add('reveal-ranks');
+}
+setInterval(animateRanks, 10000);
