@@ -55,3 +55,11 @@ Pages 배포는 화면·스크립트·성경 다운로드·QR 파일만 포함�
 
 참고: https://docs.ollama.com/api/chat
 https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/
+
+## 첫 상담과 후속 대화
+
+첫 요청(messages에 사용자 메시지 하나)은 말씀 → 해석 → 응답 템플릿을 사용한다.
+이전 사용자·상담 답변이 포함된 후속 요청은 제목 없이 따뜻하고 긍정적인 목회적 대화체로 답한다.
+이전 대화 문맥을 전달하되 실제 목사임을 주장하거나 결과를 보장하지 않는다.
+화면의 ‘대화 지우고 새로 시작’은 브라우저 대화 기록을 비우므로 다음 답변부터 첫 상담 템플릿이 적용된다.
+이 동작은 일일 응답 횟수를 초기화하지 않는다.

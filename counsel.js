@@ -95,7 +95,7 @@ form.addEventListener('submit', async event => {
     if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('답변을 받지 못했습니다. 다시 시도해 주세요.');
     history.push({ role: 'user', content }, { role: 'assistant', content: data.reply });
     // Keep recent turns within the local model's bounded context window.
-    while (history.length > 10 || history.reduce((sum, row) => sum + row.content.length, 0) > 10000) history.splice(0, 2);
+    while (history.length > 2 && (history.length > 10 || history.reduce((sum, row) => sum + row.content.length, 0) > 10000)) history.splice(0, 2);
     appendMessage('assistant', data.reply);
     input.value = '';
     feedback.textContent = '이어서 이야기해 주세요.';
