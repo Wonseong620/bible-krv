@@ -19,6 +19,8 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL = os.environ.get('COUNSEL_MODEL', 'qwen3:14b')
+VERSION = '1.2'
+FOLLOWUP_STYLE = (ROOT / 'server/prompts/followup-style.md').read_text(encoding='utf-8')
 OLLAMA = 'http://127.0.0.1:11434'
 PORT = int(os.environ.get('COUNSEL_PORT', '8765'))
 LOCK = threading.BoundedSemaphore(1)
@@ -114,7 +116,7 @@ def counsel(rows):
     query = '\n'.join(r['content'] for r in rows[-3:] if r['role']=='user')
     chosen, context = retrieve(query)
     first_turn = len(rows) == 1
-    turn_prompt = FIRST_TURN if first_turn else FOLLOW_UP
+    turn_prompt = FIRST_TURN if first_turn else FOLLOW_UP+'\n\n'+FOLLOWUP_STYLE
     result = ollama('/api/chat', {
         'model':MODEL,'stream':False,'think':False,'format':SCHEMA if first_turn else FOLLOW_SCHEMA,
         'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
@@ -127,7 +129,7 @@ def counsel(rows):
         raise ValueError('답변을 완성하지 못했습니다. 다시 시도해 주세요.')
     quote = '\n\n'.join(r['text']+'\n— '+r['book']+' '+r['chapter']+':'+r['verse']+' (개역한글)' for r in chosen)
     reply = ('① 말씀\n'+quote+'\n\n② 해석\n'+answer['interpretation']+'\n\n③ 응답\n'+answer['response']) if first_turn else answer['response'].strip()
-    return {'reply':reply,'model':MODEL,'verses':chosen if first_turn else [],'mode':'template' if first_turn else 'conversation'}
+    return {'reply':reply,'model':MODEL,'verses':chosen if first_turn else [],'mode':'template' if first_turn else 'conversation','version':VERSION}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -167,7 +169,7 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 installed=ollama('/api/tags',timeout=3).get('models',[])
                 ready=any(m['name']==MODEL for m in installed)
-                return self.json(200 if ready else 503,{'ready':ready,'model':MODEL,'quota':QUOTA.status()})
+                return self.json(200 if ready else 503,{'ready':ready,'model':MODEL,'quota':QUOTA.status(),'version':VERSION})
             except (URLError,TimeoutError,OSError,ValueError): return self.json(503,{'ready':False})
         if path not in {'/','/index.html','/counsel.css','/counsel.js','/counsel-config.js','/share-logo-v1.png','/qr.png','/gaeyeok-hangeul.pdf','/gaeyeok-hangeul.txt','/gaeyeok-hangeul.tsv'}:
             return self.json(404,{'error':'찾을 수 없습니다.'})

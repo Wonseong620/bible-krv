@@ -14,16 +14,21 @@ class ConversationTests(unittest.TestCase):
         with patch('server.app.ollama',side_effect=fake):
             first=counsel([{'role':'user','content':'앞날이 불안해요'}])
             self.assertEqual(first['mode'],'template')
+            self.assertNotIn('humanize-korean',calls[-1]['messages'][0]['content'])
             self.assertTrue(first['reply'].startswith('① 말씀'))
             rows=[{'role':'user','content':'앞날이 불안해요'},{'role':'assistant','content':first['reply']},{'role':'user','content':'취업 때문에요'}]
             follow=counsel(rows)
             self.assertEqual(follow['mode'],'conversation')
+            self.assertEqual(follow['version'],'1.2')
+            self.assertIn('humanize-korean',calls[-1]['messages'][0]['content'])
+            self.assertIn('AI 상담 도우미임을 정직하게',calls[-1]['messages'][0]['content'])
             self.assertNotIn('① 말씀',follow['reply'])
             self.assertEqual(follow['verses'],[])
             self.assertEqual(calls[-1]['messages'][1:],rows)
             # Clearing browser history sends a single new user message.
             reset=counsel([{'role':'user','content':'새로운 고민이 있어요'}])
             self.assertEqual(reset['mode'],'template')
+            self.assertNotIn('humanize-korean',calls[-1]['messages'][0]['content'])
             self.assertTrue(reset['reply'].startswith('① 말씀'))
     def test_invalid_followup_response_rejected(self):
         rows=[{'role':'user','content':'고민'},{'role':'assistant','content':'응답'},{'role':'user','content':'후속'}]

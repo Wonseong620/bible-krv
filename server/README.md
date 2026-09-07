@@ -63,3 +63,19 @@ https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-
 이전 대화 문맥을 전달하되 실제 목사임을 주장하거나 결과를 보장하지 않는다.
 화면의 ‘대화 지우고 새로 시작’은 브라우저 대화 기록을 비우므로 다음 답변부터 첫 상담 템플릿이 적용된다.
 이 동작은 일일 응답 횟수를 초기화하지 않는다.
+
+## v1.2 — 자연스러운 후속 대화
+
+후속 답변에만 `prompts/followup-style.md`를 로드한다. 첫 답변 템플릿에는 적용하지 않는다.
+한국어 번역투, 기계적인 나열, 추상적 위로, 동일한 종결어미와 조언의 반복을 줄이고
+사용자의 구체적인 이야기를 받아 주는 목회적 대화체를 사용한다. AI라는 안내는 유지한다.
+
+원전: https://github.com/epoko77-ai/im-not-ai
+참조 커밋: 9747f036cdc28a1a8aea4dc71fef1f7846eb96f7
+참조 파일: codex/skills/humanize-korean/SKILL.md 및 references/quick-rules.md
+라이선스: MIT, `third_party/im-not-ai-LICENSE.txt`에 포함.
+
+이 서비스에서는 원전의 문체 원칙을 Qwen용 단일 생성 프롬프트로 적용했다.
+원전의 파일 출력·변경률 측정 CLI 전체를 설치하거나 실행하지 않는다.
+상담 본문을 파일로 저장하지 않으며, 별도 윤문 API 호출이나 기계적인 문자열 치환도 하지 않는다.
+자연스러운 표현은 모델에 따라 달라질 수 있다. 인용·수치·사실·확신 수준 보존과 위기 대응을 우선한다.
