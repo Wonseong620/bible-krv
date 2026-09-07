@@ -21,3 +21,7 @@ footer .version{flex-basis:100%;text-align:center}
 @media(max-width:600px){.app-layout{padding:0}.top-concerns{padding:14px 10px}.rank-list{gap:8px 4px}.rank-list li{font-size:12px;gap:3px}.rank-list li:before{font-size:10px}.suggestions{gap:5px}.suggestions button{font-size:12px;padding:8px 5px}.trends-heading{gap:6px}}
 
 .conversation>.top-concerns{margin:18px 0 0}
+
+.live-label:before{display:inline-block;animation:live-pulse 3s ease-in-out infinite}
+@keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.live-label:before{animation:none;opacity:1}}
