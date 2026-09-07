@@ -32,6 +32,6 @@ footer .version{flex-basis:100%;text-align:center}
 .top-concerns .rank-list li:before{content:counter(ranking);min-width:14px;font-weight:500}
 @media(max-width:600px){.top-concerns .rank-list{gap:6px}.top-concerns .rank-list li{padding:8px;gap:6px}}
 
-.top-concerns .rank-list.reveal-ranks li{animation:rank-appear .55s ease-out both;animation-delay:calc(var(--rank-index,0)*110ms)}
+.top-concerns .rank-list.reveal-ranks li{animation:rank-appear .786s ease-out both;animation-delay:calc(var(--rank-index,0)*157ms)}
 @keyframes rank-appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.top-concerns .rank-list.reveal-ranks li{animation:none}}
