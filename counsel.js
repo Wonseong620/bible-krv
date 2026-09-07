@@ -293,7 +293,7 @@ async function loadTrends() {
     const data = await response.json();
     if (!Array.isArray(data.keywords) || !data.keywords.every(item => typeof item === 'string')) throw new Error();
     list.replaceChildren();
-    for (const label of data.keywords.slice(0, 10)) {
+    for (const label of data.keywords.slice(0, 9)) {
       const item = document.createElement('li'); item.textContent = label; list.append(item);
     }
     empty.hidden = list.children.length > 0;
