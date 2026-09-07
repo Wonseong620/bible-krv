@@ -24,20 +24,20 @@ class TrendsTests(unittest.TestCase):
         self.assertEqual(rows[0],('가족 걱정 5','응답 원문'))
         self.assertEqual(rows[-1][0],'가족 걱정 104')
         self.assertNotIn('daily_trends',tables)
-        self.assertNotIn('취업',self.q.trends()['keywords'])
-        self.assertIn('가족',self.q.trends()['keywords'])
+        self.assertNotIn('취업부담',self.q.trends()['keywords'])
+        self.assertIn('가족관계',self.q.trends()['keywords'])
         self.assertNotIn('question',self.q.trends())
         self.assertEqual(Quota(self.path,lambda:self.now).trends(),self.q.trends())
     def test_first_record_failure_and_day_boundary(self):
         self.add('취업 걱정')
-        self.assertIn('취업',self.q.trends()['keywords'])
+        self.assertIn('취업부담',self.q.trends()['keywords'])
         before=self.q.trends()
         def fail():raise RuntimeError()
         with self.assertRaises(RuntimeError):self.q.run(fail,question='취업 걱정')
         self.assertEqual(self.q.trends(),before)
         self.now+=timedelta(days=1)
         self.add('취업 걱정')
-        self.assertIn('취업',self.q.trends()['keywords'])
+        self.assertIn('취업부담',self.q.trends()['keywords'])
         self.assertEqual(self.q.status()['completed'],1)
     def test_top_ten_and_personal_text_not_exposed(self):
         for text in ['불안 두려움 외로움 관계 소통 갈등 용서','취업 진로 직장 가족 결혼 육아 신앙']:
@@ -53,3 +53,14 @@ class TrendsTests(unittest.TestCase):
         self.assertEqual(q.trends()['keywords'],[])
         with sqlite3.connect(self.path) as c:
             self.assertFalse(c.execute("SELECT name FROM sqlite_master WHERE name='daily_trends'").fetchone())
+
+    def test_contextual_concerns(self):
+        from server.trends import classify
+        labels=classify('엄마와 말이 안 통해서 자꾸 싸워요')['keyword']
+        self.assertIn('가족관계',labels)
+        self.assertIn('소통문제',labels)
+        self.assertIn('관계갈등',labels)
+        labels=classify('남들보다 뒤처지는 것 같고 앞날이 막막해요')['keyword']
+        self.assertIn('비교심리',labels)
+        self.assertIn('불안심리',labels)
+        self.assertNotIn('소통문제',classify('오늘 좋은 대화를 나눴어요')['keyword'])
