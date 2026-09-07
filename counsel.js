@@ -83,22 +83,53 @@ form.addEventListener('submit', async event => {
   generationStatus.append(dots);
   form.setAttribute('aria-busy', 'true');
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 165000);
+  const timeout = setTimeout(() => controller.abort(), 255000);
   try {
     const response = await fetch(url, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/x-ndjson' },
       body: JSON.stringify({ messages: [...history, { role: 'user', content }] }),
       signal: controller.signal,
     });
-    const data = await response.json();
+    let data;
+    if (response.ok && response.headers.get('Content-Type')?.includes('application/x-ndjson')) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const consume = line => {
+        if (!line.trim()) return;
+        const event = JSON.parse(line);
+        if (event.type === 'error') throw new Error(event.error || '답변 생성이 중단되었습니다.');
+        if (event.type === 'partial' && typeof event.reply === 'string') {
+          if (!assistantMessage) {
+            assistantMessage = appendMessage('assistant', event.reply);
+            assistantMessage.scrollIntoView({ block:'start', behavior:'auto' });
+          } else assistantMessage.textContent = event.reply;
+        }
+        if (event.type === 'done') data = event;
+      };
+      try {
+        while (true) {
+          const chunk = await reader.read();
+          buffer += decoder.decode(chunk.value || new Uint8Array(), {stream:!chunk.done});
+          let newline;
+          while ((newline = buffer.indexOf('\n')) >= 0) {
+            consume(buffer.slice(0,newline)); buffer = buffer.slice(newline+1);
+          }
+          if (chunk.done) break;
+        }
+        if (buffer.trim()) consume(buffer);
+        if (!data) throw new Error('답변 생성이 중단되었습니다. 다시 시도해 주세요.');
+      } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+    } else data = await response.json();
     showQuota(data.quota);
     if (response.ok) loadTrends();
     if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : '상담에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('답변을 받지 못했습니다. 다시 시도해 주세요.');
     history.push({ role: 'user', content }, { role: 'assistant', content: data.reply });
     // Keep recent turns within the local model's bounded context window.
-    while (history.length > 2 && (history.length > 10 || history.reduce((sum, row) => sum + row.content.length, 0) > 10000)) history.splice(0, 2);
-    assistantMessage = appendMessage('assistant', data.reply);
+    while (history.length > 2 && (history.length > 18 || history.reduce((sum, row) => sum + row.content.length, 0) > 18000)) history.splice(0, 2);
+    if (assistantMessage) assistantMessage.textContent = data.reply;
+    else assistantMessage = appendMessage('assistant', data.reply);
     input.value = '';
     showSuggestions(data.suggestions, true);
     feedback.textContent = '이어서 이야기해 주세요.';
@@ -106,6 +137,7 @@ form.addEventListener('submit', async event => {
     document.querySelector('#availability').classList.add('online');
   } catch (error) {
     userMessage.remove();
+    if (assistantMessage) { assistantMessage.remove(); assistantMessage = null; }
     welcome.hidden = history.length > 0;
     feedback.textContent = error.name === 'AbortError' ? '응답이 지연되고 있습니다. 입력한 내용은 남아 있으니 다시 시도해 주세요.' : error instanceof TypeError ? '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.' : error.message;
   } finally {

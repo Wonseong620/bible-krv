@@ -7,14 +7,17 @@ import re
 import socket
 import sqlite3
 import threading
+import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 try:
+    from .streaming import fields_so_far
     from .quota import Quota, QuotaExceeded
 except ImportError:
+    from streaming import fields_so_far
     from quota import Quota, QuotaExceeded
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -63,7 +66,7 @@ SUGGESTION_PROMPT = """답변과 함께 suggestions 배열에 사용자가 다�
 현재 고민과 방금 답변에 구체적으로 이어지는 서로 다른 짧은 한국어 요청문으로, 각 35자 이내다.
 예: '이 말씀으로 묵상 기도문을 써 주세요.' 사용자의 입장에서 쓰며 '해드릴까요?'라고 묻지 않는다.
 위험 상황에서는 기도만 권하지 말고 안전 확보와 도움 요청을 우선한다. 개인정보를 되풀이하지 않는다."""
-INPUT_GUIDANCE = """최신 사용자 발화를 전체 대화 맥락에서 판단해 disposition을 설정한다.
+INPUT_GUIDANCE = """최신 사용자 발화를 전체 대화 맥락에서 판단해 disposition을 설정한다. JSON은 disposition을 가장 먼저, 그 다음 interpretation(첫 답변만), response, suggestions 순으로 작성한다.
 - counsel: 정상 상담. 오타·비문이어도 뜻을 알 수 있으면 그대로 상담한다. 분노 표현, 욕설의 인용, 피해 경험, 성폭력·성 건강·성적 고민의 진지한 상담은 자제 대상으로 보지 않는다. 자해·폭력 위험은 안전 상담을 우선한다.
 - clarify: 무작위 글자나 뜻을 파악할 수 없는 문장. 도덕성을 평가하지 않고 다시 표현하도록 안내한다.
 - redirect: 상담 맥락 없이 상대를 모욕하는 욕설·혐오·성희롱, 노골적 성적 흥분을 위한 묘사 요청, 타인에게 해를 끼치는 행위의 실행 지원 요청. 욕설·음담패설을 되풀이하거나 요청을 수행하지 않는다.
@@ -72,6 +75,7 @@ redirect나 clarify이면 interpretation은 빈 문자열, response는 짧은 �
 for schema in (SCHEMA, FOLLOW_SCHEMA):
     schema['properties']['disposition'] = {'type':'string','enum':['counsel','clarify','redirect']}
     schema['required'].append('disposition')
+    schema['properties'] = {'disposition':schema['properties']['disposition'], **{k:v for k,v in schema['properties'].items() if k != 'disposition'}}
     schema['properties']['suggestions'] = {'type':'array','items':{'type':'string'},'minItems':3,'maxItems':3}
     schema['required'].append('suggestions')
 
@@ -88,7 +92,7 @@ def validate(data):
     if not isinstance(data, dict):
         raise ValueError('잘못된 요청입니다.')
     rows = data.get('messages')
-    if not isinstance(rows, list) or not 1 <= len(rows) <= 13 or len(rows) % 2 != 1:
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 21 or len(rows) % 2 != 1:
         raise ValueError('대화가 길어졌습니다. 새 대화를 시작해 주세요.')
     clean = []
     for i, r in enumerate(rows):
@@ -99,7 +103,7 @@ def validate(data):
         if not isinstance(s, str) or not s.strip() or len(s) > limit:
             raise ValueError('메시지 길이를 확인해 주세요.')
         clean.append({'role':r['role'], 'content':s.strip()})
-    if sum(len(r['content']) for r in clean) > 14000:
+    if sum(len(r['content']) for r in clean) > 22000:
         raise ValueError('대화가 길어졌습니다. 새 대화를 시작해 주세요.')
     return clean
 
@@ -138,17 +142,52 @@ def ollama(path, payload=None, timeout=150):
         return json.load(r)
 
 
-def counsel(rows):
+def stream_ollama(payload, preview):
+    payload = dict(payload, stream=True)
+    request = Request(OLLAMA+'/api/chat', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    content = ''
+    deadline = time.monotonic()+240
+    with urlopen(request, timeout=240) as response:
+        for line in response:
+            if time.monotonic() > deadline: raise TimeoutError()
+            chunk = json.loads(line)
+            if chunk.get('error'): raise ValueError('Model stream failed')
+            content += chunk.get('message', {}).get('content', '')
+            preview(content)
+            if chunk.get('done'):
+                return {'message':{'content':content}, 'done_reason':chunk.get('done_reason')}
+    raise ValueError('Incomplete model stream')
+
+
+def counsel(rows, emit=None):
     # Include the preceding user turn for short follow-up questions.
     query = '\n'.join(r['content'] for r in rows[-3:] if r['role']=='user')
     chosen, context = retrieve(query)
     first_turn = len(rows) == 1
     turn_prompt = FIRST_TURN if first_turn else FOLLOW_UP+'\n\n'+FOLLOWUP_STYLE
-    result = ollama('/api/chat', {
+    quote = '\n\n'.join(r['text']+'\n— '+r['book']+' '+r['chapter']+':'+r['verse']+' (개역한글)' for r in chosen)
+    last_preview = ''
+    def preview(raw):
+        nonlocal last_preview
+        fields = fields_so_far(raw)
+        # Withhold counseling prose until the disposition is explicitly known.
+        if fields.get('disposition') != 'counsel':
+            emit({'type':'ping'})
+            return
+        text = fields.get('response', '')
+        if first_turn:
+            interpretation = fields.get('interpretation', '')
+            text = '① 말씀\n'+quote+'\n\n② 해석\n'+interpretation
+            if fields.get('response'): text += '\n\n③ 응답\n'+fields['response']
+        if text and text != last_preview:
+            emit({'type':'partial','reply':text})
+            last_preview = text
+    payload = {
         'model':MODEL,'stream':False,'think':False,'format':SCHEMA if first_turn else FOLLOW_SCHEMA,
         'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n'+SUGGESTION_PROMPT+'\n'+INPUT_GUIDANCE+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
-        'options':{'temperature':0.35,'num_ctx':8192,'num_predict':1300}, 'keep_alive':'10m',
-    })
+        'options':{'temperature':0.35,'num_ctx':16384,'num_predict':1800}, 'keep_alive':'10m',
+    }
+    result = stream_ollama(payload, preview) if emit else ollama('/api/chat', payload)
     if result.get('done_reason') == 'length': raise ValueError('답변 생성 한도에 도달했습니다. 질문을 짧게 나누어 주세요.')
     answer = json.loads(result['message']['content'])
     if isinstance(answer, dict) and answer.get('disposition') in ('clarify', 'redirect'):
@@ -176,7 +215,23 @@ class Handler(SimpleHTTPRequestHandler):
         origin = self.headers.get('Origin')
         if origin in ORIGINS: self.send_header('Access-Control-Allow-Origin',origin)
         super().end_headers()
+    def stream_event(self, data):
+        if not getattr(self, 'stream_started', False):
+            self.send_response(200)
+            self.send_header('Content-Type','application/x-ndjson; charset=utf-8')
+            self.send_header('X-Accel-Buffering','no')
+            self.send_header('Connection','close')
+            self.end_headers()
+            self.close_connection = True
+            self.stream_started = True
+        self.wfile.write((json.dumps(data,ensure_ascii=False)+'\n').encode())
+        self.wfile.flush()
+
     def json(self,status,data):
+        if getattr(self, 'stream_started', False):
+            try: self.stream_event({'type':'done' if status==200 else 'error', **data})
+            except (BrokenPipeError,ConnectionResetError,OSError): pass
+            return
         body=json.dumps(data,ensure_ascii=False).encode()
         try:
             self.send_response(status);self.send_header('Content-Type','application/json; charset=utf-8')
@@ -217,13 +272,14 @@ class Handler(SimpleHTTPRequestHandler):
         if self.headers.get('Content-Type','').split(';')[0]!='application/json': return self.json(415,{'error':'JSON 요청만 허용합니다.'})
         try:
             size=int(self.headers.get('Content-Length','0'))
-            if not 0<size<=64000: return self.json(413,{'error':'요청이 너무 큽니다.'})
+            if not 0<size<=100000: return self.json(413,{'error':'요청이 너무 큽니다.'})
             self.connection.settimeout(10)
             rows=validate(json.loads(self.rfile.read(size)))
         except (ValueError,UnicodeError,socket.timeout): return self.json(400,{'error':'요청 형식이나 대화 길이를 확인해 주세요. 새 대화를 시작할 수 있습니다.'})
         if not LOCK.acquire(blocking=False): return self.json(429,{'error':'다른 답변을 작성 중입니다. 잠시 후 다시 시도해 주세요.'})
         try:
-            result = QUOTA.run(lambda: counsel(rows), question=rows[-1]['content'])
+            wants_stream = 'application/x-ndjson' in self.headers.get('Accept', '')
+            result = QUOTA.run(lambda: counsel(rows, self.stream_event if wants_stream else None), question=rows[-1]['content'])
             result['quota'] = QUOTA.status()
             self.json(200,result)
         except QuotaExceeded:
