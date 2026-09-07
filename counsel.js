@@ -69,7 +69,7 @@ form.addEventListener('submit', async event => {
   welcome.hidden = true;
   const userMessage = appendMessage('user', content);
   feedback.textContent = '';
-  generationStatus.textContent = '답변을 생성하고 있습니다';
+  generationStatus.textContent = '성경말씀을 살피고 있어요';
   const dots = document.createElement('span');
   dots.className = 'typing-dots';
   dots.setAttribute('aria-hidden', 'true');
