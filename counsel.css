@@ -35,3 +35,5 @@ footer .version{flex-basis:100%;text-align:center}
 .top-concerns .rank-list.reveal-ranks li{animation:rank-appear .786s ease-out both;animation-delay:calc(var(--rank-index,0)*157ms)}
 @keyframes rank-appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.top-concerns .rank-list.reveal-ranks li{animation:none}}
+
+.privacy{font-size:calc(12px - 2pt)}
