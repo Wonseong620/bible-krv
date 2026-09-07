@@ -37,3 +37,4 @@ footer .version{flex-basis:100%;text-align:center}
 @media(prefers-reduced-motion:reduce){.top-concerns .rank-list.reveal-ranks li{animation:none}}
 
 .privacy{font-size:calc(12px - 2pt)}
+.message.assistant{scroll-margin-top:24px}

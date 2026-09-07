@@ -64,9 +64,11 @@ form.addEventListener('submit', async event => {
   busy = true;
   setSuggestionBusy(true);
   send.disabled = true;
+  input.blur();
   input.readOnly = true;
   reset.hidden = true;
   welcome.hidden = true;
+  let assistantMessage = null;
   const userMessage = appendMessage('user', content);
   feedback.textContent = '';
   generationStatus.textContent = '성경말씀을 살피고 있어요';
@@ -96,7 +98,7 @@ form.addEventListener('submit', async event => {
     history.push({ role: 'user', content }, { role: 'assistant', content: data.reply });
     // Keep recent turns within the local model's bounded context window.
     while (history.length > 2 && (history.length > 10 || history.reduce((sum, row) => sum + row.content.length, 0) > 10000)) history.splice(0, 2);
-    appendMessage('assistant', data.reply);
+    assistantMessage = appendMessage('assistant', data.reply);
     input.value = '';
     showSuggestions(data.suggestions, true);
     feedback.textContent = '이어서 이야기해 주세요.';
@@ -115,7 +117,10 @@ form.addEventListener('submit', async event => {
     send.disabled = false;
     input.readOnly = false;
     reset.hidden = history.length === 0;
-    input.focus();
+    requestAnimationFrame(() => {
+      if (assistantMessage) assistantMessage.scrollIntoView({ block: 'start', behavior: 'auto' });
+      else feedback.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    });
   }
 });
 reset.addEventListener('click', () => {
