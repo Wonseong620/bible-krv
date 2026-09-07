@@ -157,7 +157,7 @@ class Handler(SimpleHTTPRequestHandler):
                 ready=any(m['name']==MODEL for m in installed)
                 return self.json(200 if ready else 503,{'ready':ready,'model':MODEL,'quota':QUOTA.status()})
             except (URLError,TimeoutError,OSError,ValueError): return self.json(503,{'ready':False})
-        if path not in {'/','/index.html','/counsel.css','/counsel.js','/counsel-config.js','/qr.png','/gaeyeok-hangeul.pdf','/gaeyeok-hangeul.txt','/gaeyeok-hangeul.tsv'}:
+        if path not in {'/','/index.html','/counsel.css','/counsel.js','/counsel-config.js','/share-logo-v1.png','/qr.png','/gaeyeok-hangeul.pdf','/gaeyeok-hangeul.txt','/gaeyeok-hangeul.tsv'}:
             return self.json(404,{'error':'찾을 수 없습니다.'})
         super().do_GET()
     def do_HEAD(self):
