@@ -24,7 +24,7 @@ if (endpoint) {
       showQuota(data.quota);
       document.querySelector('#availability').textContent = '상담 가능';
       document.querySelector('#availability').classList.add('online');
-      if (!busy) feedback.textContent = '나누고 싶은 이야기를 적어 주세요.';
+      if (!busy) feedback.textContent = '';
     }).catch(() => { if (!busy) feedback.textContent = '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'; });
 }
 document.addEventListener('click', event => {
