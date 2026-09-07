@@ -28,11 +28,13 @@ class TrendsTests(unittest.TestCase):
         self.assertIn('가족',self.q.trends()['keywords'])
         self.assertNotIn('question',self.q.trends())
         self.assertEqual(Quota(self.path,lambda:self.now).trends(),self.q.trends())
-    def test_failure_threshold_and_day_boundary(self):
-        for _ in range(4):self.add('취업 걱정')
+    def test_first_record_failure_and_day_boundary(self):
+        self.add('취업 걱정')
+        self.assertIn('취업',self.q.trends()['keywords'])
+        before=self.q.trends()
         def fail():raise RuntimeError()
         with self.assertRaises(RuntimeError):self.q.run(fail,question='취업 걱정')
-        self.assertEqual(self.q.trends()['keywords'],[])
+        self.assertEqual(self.q.trends(),before)
         self.now+=timedelta(days=1)
         self.add('취업 걱정')
         self.assertIn('취업',self.q.trends()['keywords'])
