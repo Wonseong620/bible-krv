@@ -26,10 +26,6 @@ if (endpoint) {
       if (!busy) feedback.textContent = '나누고 싶은 이야기를 적어 주세요.';
     }).catch(() => { if (!busy) feedback.textContent = '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'; });
 }
-document.querySelectorAll('[data-prompt]').forEach(button => button.addEventListener('click', () => {
-  input.value = button.dataset.prompt;
-  input.focus();
-}));
 document.addEventListener('click', event => {
   if (!downloads.contains(event.target)) downloads.open = false;
 });
@@ -65,6 +61,7 @@ form.addEventListener('submit', async event => {
     return;
   }
   busy = true;
+  setSuggestionBusy(true);
   send.disabled = true;
   input.readOnly = true;
   reset.hidden = true;
@@ -99,6 +96,7 @@ form.addEventListener('submit', async event => {
     while (history.length > 2 && (history.length > 10 || history.reduce((sum, row) => sum + row.content.length, 0) > 10000)) history.splice(0, 2);
     appendMessage('assistant', data.reply);
     input.value = '';
+    showSuggestions(data.suggestions, true);
     feedback.textContent = '이어서 이야기해 주세요.';
     document.querySelector('#availability').textContent = '상담 연결됨';
     document.querySelector('#availability').classList.add('online');
@@ -109,6 +107,7 @@ form.addEventListener('submit', async event => {
   } finally {
     clearTimeout(timeout);
     busy = false;
+    setSuggestionBusy(false);
     form.removeAttribute('aria-busy');
     send.disabled = false;
     input.readOnly = false;
@@ -119,6 +118,7 @@ form.addEventListener('submit', async event => {
 reset.addEventListener('click', () => {
   if (busy) return;
   history = [];
+  randomQuestions();
   messages.replaceChildren();
   welcome.hidden = false;
   reset.hidden = true;
@@ -148,34 +148,61 @@ copyLink.addEventListener('click', async () => {
   }
 });
 
-async function loadTrends() {
-  const groups = [['topics', '#top-topics', '#topics-empty'], ['keywords', '#top-keywords', '#keywords-empty']];
-  try {
-    if (!endpoint) throw new Error();
-    const response = await fetch(new URL('/api/trends', new URL(endpoint, location.href)), { signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error();
-    const data = await response.json();
-    for (const [key, listSelector, emptySelector] of groups) {
-      if (!Array.isArray(data[key]) || !data[key].every(item => typeof item === 'string')) throw new Error();
-      const list = document.querySelector(listSelector);
-      list.replaceChildren();
-      for (const label of data[key].slice(0, 7)) {
-        const item = document.createElement('li');
-        item.textContent = label;
-        list.append(item);
-      }
-      const empty = document.querySelector(emptySelector);
-      empty.hidden = list.children.length > 0;
-      empty.textContent = '아직 이야기가 모이고 있어요.';
-    }
-  } catch {
-    for (const [, listSelector, emptySelector] of groups) {
-      document.querySelector(listSelector).replaceChildren();
-      const empty = document.querySelector(emptySelector);
-      empty.hidden = false;
-      empty.textContent = '잠시 후 다시 확인해 주세요.';
-    }
+
+const initialQuestions = ['앞날이 불안해요', '관계 때문에 힘들어요', '일과 진로가 고민이에요', '기도가 어렵게 느껴져요', '가족과 잘 지내고 싶어요', '비교하는 마음이 들어요', '외로움을 나누고 싶어요', '선택을 앞두고 고민돼요', '저를 용서하기 어려워요', '마음 편히 쉬고 싶어요'];
+function setSuggestionBusy(value) {
+  document.querySelectorAll('#suggestions button, #shuffle-questions').forEach(button => { button.disabled = value; });
+}
+function showSuggestions(values, followup = false) {
+  const list = document.querySelector('#suggestions');
+  list.replaceChildren();
+  const clean = Array.isArray(values) ? [...new Set(values.filter(v => typeof v === 'string' && v.trim() && v.length <= 60))].slice(0, 3) : [];
+  document.querySelector('.question-box').hidden = clean.length !== 3;
+  document.querySelector('#suggestion-title').textContent = followup ? '이어서 나누고 싶은 이야기' : '이런 이야기로 시작해 보세요';
+  document.querySelector('#shuffle-questions').hidden = followup;
+  for (const text of clean) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = text; button.disabled = busy;
+    button.addEventListener('click', () => { if (!busy) { input.value = text; input.focus(); } });
+    list.append(button);
   }
 }
+function randomQuestions() {
+  const pool = [...initialQuestions];
+  showSuggestions(Array.from({length: 3}, () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0]));
+}
+document.querySelector('#shuffle-questions').addEventListener('click', randomQuestions);
+randomQuestions();
+let trendsLoading = false;
+async function loadTrends() {
+  if (trendsLoading) return;
+  trendsLoading = true;
+  const list = document.querySelector('#top-keywords');
+  const empty = document.querySelector('#keywords-empty');
+  const updated = document.querySelector('#trends-updated');
+  try {
+    if (!endpoint) throw new Error();
+    const response = await fetch(new URL('/api/trends', new URL(endpoint, location.href)), { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    if (!Array.isArray(data.keywords) || !data.keywords.every(item => typeof item === 'string')) throw new Error();
+    list.replaceChildren();
+    for (const label of data.keywords.slice(0, 10)) {
+      const item = document.createElement('li'); item.textContent = label; list.append(item);
+    }
+    empty.hidden = list.children.length > 0;
+    empty.textContent = '아직 이야기가 모이고 있어요.';
+    const date = new Date(data.updated_at);
+    if (Number.isNaN(date.getTime())) throw new Error();
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Seoul', year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).map(p => [p.type,p.value]));
+    updated.dateTime = date.toISOString();
+    updated.textContent = `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute} update`;
+    updated.title = '한국시간 기준';
+  } catch {
+    empty.hidden = false;
+    empty.textContent = list.children.length ? '갱신이 지연되고 있어요.' : '잠시 후 다시 확인해 주세요.';
+  } finally { trendsLoading = false; }
+}
 loadTrends();
+setInterval(() => { if (!document.hidden) loadTrends(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadTrends(); });

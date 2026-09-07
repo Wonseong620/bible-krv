@@ -26,9 +26,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="counsel.css">
+<link rel="stylesheet" href="counsel.css?v=2.0">
 <script src="counsel-config.js" defer></script>
-<script src="counsel.js" defer></script>
+<script src="counsel.js?v=2.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#message">상담 입력으로 건너뛰기</a>
@@ -54,17 +54,21 @@
       <h1>오늘, 어떤 마음으로<br>오셨나요?</h1>
       <p class="intro">정리되지 않은 마음도 괜찮습니다.<br>당신의 이야기를 듣고, 말씀 안에서 함께 생각하겠습니다.</p>
       <div class="verse"><span class="verse-rule" aria-hidden="true"></span><blockquote>수고하고 무거운 짐진 자들아 다 내게로 오라<br>내가 너희를 쉬게 하리라</blockquote><cite>마태복음 11:28 · 개역한글</cite></div>
-      <div class="suggestions" aria-label="대화 시작 예시">
-        <button type="button" data-prompt="앞날이 불안해서 마음이 편하지 않아요.">앞날이 불안해요 <span aria-hidden="true">↗</span></button>
-        <button type="button" data-prompt="가까운 사람과의 관계 때문에 마음이 힘들어요.">관계 때문에 힘들어요 <span aria-hidden="true">↗</span></button>
-        <button type="button" data-prompt="일과 진로에 대해 어떤 선택을 해야 할지 고민이에요.">일과 진로가 고민이에요 <span aria-hidden="true">↗</span></button>
-      </div>
+
     </div>
     <div id="messages" class="messages" role="log" aria-label="대화 내용" aria-live="polite" aria-relevant="additions text"></div>
   </section>
   <div class="composer-area">
     <p id="quota" class="feedback">하루 총 100회 응답</p>
     <p id="feedback" class="feedback" role="status">상담 서비스는 준비 중입니다. 연결이 완료되면 이곳에서 대화할 수 있습니다.</p>
+    <section class="top-concerns" aria-labelledby="today-title">
+      <div class="trends-heading"><h2 id="today-title">오늘의 TOP 고민</h2><span class="live-label">LIVE</span><time id="trends-updated"></time></div>
+      <ol id="top-keywords" class="rank-list"></ol><p id="keywords-empty" class="rank-empty">오늘의 고민을 불러오고 있어요.</p>
+    </section>
+    <section class="question-box" aria-label="추천 질문">
+      <div class="question-heading"><span id="suggestion-title">이런 이야기로 시작해 보세요</span><button id="shuffle-questions" type="button">다른 질문 ↻</button></div>
+      <div id="suggestions" class="suggestions"></div>
+    </section>
     <form id="chat-form" class="composer">
       <label class="sr-only" for="message">나누고 싶은 고민</label>
       <textarea id="message" name="message" rows="2" maxlength="2000" placeholder="마음에 담아 둔 이야기를 적어 주세요." aria-describedby="privacy feedback"></textarea>
@@ -74,13 +78,8 @@
     <button id="reset" class="reset" type="button" hidden>대화 지우고 새로 시작</button>
   </div>
 </main>
-<aside class="today-panel" aria-labelledby="today-title">
-  <div class="today-heading"><span class="eyebrow">함께 나누는 마음</span><h2 id="today-title">다른 분들은<br>어떤 마음일까요?</h2><p>오늘 이곳에서 나눈 이야기를<br>살짝 만나 보세요.</p></div>
-  <section class="ranking-card" aria-labelledby="topics-title"><div class="ranking-heading"><h3 id="topics-title">함께 나눈 이야기</h3><span>TOP 7</span></div><ol id="top-topics" class="rank-list"></ol><p id="topics-empty" class="rank-empty">오늘의 주제를 불러오고 있어요.</p></section>
-  <section class="ranking-card" aria-labelledby="keywords-title"><div class="ranking-heading"><h3 id="keywords-title">자주 꺼낸 말</h3><span>TOP 7</span></div><ol id="top-keywords" class="rank-list"></ol><p id="keywords-empty" class="rank-empty">오늘의 키워드를 불러오고 있어요.</p></section>
-  <p class="trends-note">첫 대화의 주제를 모아 보여드려요.<br>5개 이상 대화에 등장한 항목만 표시합니다.</p>
-</aside>
+
 </div>
-<footer><span>성경 개역한글판과 함께합니다.</span><div class="share"><button id="copy-link" type="button">링크 복사</button><span id="copy-status" class="sr-only" role="status"></span><input id="share-url" aria-label="공유 링크" readonly value="https://wonseong620.github.io/bible-krv/share.html" hidden></div><span class="version">v1.2</span></footer>
+<footer><span>성경 개역한글판과 함께합니다.</span><div class="share"><button id="copy-link" type="button">링크 복사</button><span id="copy-status" class="sr-only" role="status"></span><input id="share-url" aria-label="공유 링크" readonly value="https://wonseong620.github.io/bible-krv/share.html" hidden></div><span class="version">v2.0</span></footer>
 </body>
 </html>

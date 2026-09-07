@@ -31,9 +31,9 @@ class TrendsTests(unittest.TestCase):
         self.q.run(lambda:'ok',labels)
         self.assertIn('취업',self.q.trends()['keywords'])
         self.assertNotIn('count',str(self.q.trends()))
-    def test_top_seven_persistence_and_new_day(self):
-        for _ in range(5):self.q.run(lambda:'ok',{'keyword':list(KEYWORDS)[:9]})
-        self.assertEqual(len(self.q.trends()['keywords']),7)
+    def test_top_ten_persistence_and_new_day(self):
+        for _ in range(5):self.q.run(lambda:'ok',{'keyword':list(KEYWORDS)[:12]})
+        self.assertEqual(len(self.q.trends()['keywords']),10)
         self.assertEqual(Quota(self.path,lambda:self.now).trends(),self.q.trends())
         self.now+=timedelta(days=1)
         self.assertEqual(self.q.trends()['keywords'],[])

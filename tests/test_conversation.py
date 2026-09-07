@@ -10,16 +10,19 @@ class ConversationTests(unittest.TestCase):
             calls.append(payload)
             first='interpretation' in payload['format']['properties']
             answer={'interpretation':'본문의 의미입니다.','response':'함께 생각해 보아요.'} if first else {'response':'그동안 마음이 많이 무거우셨겠어요. 지금 가장 부담되는 일이 무엇인가요?'}
+            answer['suggestions']=['묵상 기도문을 써 주세요.','작은 실천을 알려 주세요.','조금 더 이야기하고 싶어요.']
             return {'message':{'content':json.dumps(answer)}}
         with patch('server.app.ollama',side_effect=fake):
             first=counsel([{'role':'user','content':'앞날이 불안해요'}])
             self.assertEqual(first['mode'],'template')
+            self.assertEqual(len(first['suggestions']),3)
             self.assertNotIn('humanize-korean',calls[-1]['messages'][0]['content'])
             self.assertTrue(first['reply'].startswith('① 말씀'))
             rows=[{'role':'user','content':'앞날이 불안해요'},{'role':'assistant','content':first['reply']},{'role':'user','content':'취업 때문에요'}]
             follow=counsel(rows)
             self.assertEqual(follow['mode'],'conversation')
-            self.assertEqual(follow['version'],'1.2')
+            self.assertEqual(len(follow['suggestions']),3)
+            self.assertEqual(follow['version'],'2.0')
             self.assertIn('humanize-korean',calls[-1]['messages'][0]['content'])
             self.assertIn('AI 상담 도우미임을 정직하게',calls[-1]['messages'][0]['content'])
             self.assertNotIn('① 말씀',follow['reply'])

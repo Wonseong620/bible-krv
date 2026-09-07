@@ -21,7 +21,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL = os.environ.get('COUNSEL_MODEL', 'qwen3:14b')
-VERSION = '1.2'
+VERSION = '2.0'
 FOLLOWUP_STYLE = (ROOT / 'server/prompts/followup-style.md').read_text(encoding='utf-8')
 OLLAMA = 'http://127.0.0.1:11434'
 PORT = int(os.environ.get('COUNSEL_PORT', '8765'))
@@ -46,9 +46,9 @@ SYSTEM = '''너는 한국어 성경 고민상담 도우미 '말씀 곁에'다. �
 작은 실천 하나와 필요한 경우 후속 질문 하나를 제안한다. 경제 관점은 관련 질문에서만 보조적으로 사용한다.
 자해·학대·즉각적인 위험이면 안전 확보와 가까운 사람·현지 긴급 지원 연결을 최우선으로 안내한다.
 학대 피해자에게 화해나 인내를 강요하지 않는다. 진단·투자 추천·약물 중단 지시를 하지 않는다.'''
-FIRST_TURN = '''첫 상담 답변이다. JSON의 interpretation(해석), response(응답) 두 문자열로 답한다.
+FIRST_TURN = '''첫 상담 답변이다. JSON의 interpretation(해석), response(응답) 문자열과 suggestions 배열로 답한다.
 각 항목은 2~4문장이다. 말씀 → 해석 → 응답 형식은 서버가 조립한다.'''
-FOLLOW_UP = '''이미 대화를 나누고 있는 후속 상담이다. JSON의 response 문자열 하나로만 답한다.
+FOLLOW_UP = '''이미 대화를 나누고 있는 후속 상담이다. JSON의 response 문자열과 suggestions 배열로 답한다.
 자상하고 긍정적인 목사님의 목회적 말투를 참고하되, 실제 목사나 사람이라고 주장하지 않는다.
 차분한 존댓말과 자연스러운 대화체로 이전 이야기와 사용자의 최신 말에 구체적으로 반응한다.
 말씀·해석·응답 같은 제목, 번호, 설교식 틀을 반복하지 않는다. 성경 구절을 매번 나열하지 않는다.
@@ -57,6 +57,22 @@ FOLLOW_UP = '''이미 대화를 나누고 있는 후속 상담이다. JSON의 re
 보통 3~6문장, 1~3개의 짧은 문단으로 답하며 사용자가 자세한 설명을 원하면 조절한다.'''
 FOLLOW_SCHEMA = {'type':'object','properties':{'response':{'type':'string'}},'required':['response'],'additionalProperties':False}
 SCHEMA = {'type':'object','properties':{'interpretation':{'type':'string'},'response':{'type':'string'}},'required':['interpretation','response'],'additionalProperties':False}
+
+SUGGESTION_PROMPT = """답변과 함께 suggestions 배열에 사용자가 다음에 보낼 질문 3개를 생성한다.
+현재 고민과 방금 답변에 구체적으로 이어지는 서로 다른 짧은 한국어 요청문으로, 각 35자 이내다.
+예: '이 말씀으로 묵상 기도문을 써 주세요.' 사용자의 입장에서 쓰며 '해드릴까요?'라고 묻지 않는다.
+위험 상황에서는 기도만 권하지 말고 안전 확보와 도움 요청을 우선한다. 개인정보를 되풀이하지 않는다."""
+for schema in (SCHEMA, FOLLOW_SCHEMA):
+    schema['properties']['suggestions'] = {'type':'array','items':{'type':'string'},'minItems':3,'maxItems':3}
+    schema['required'].append('suggestions')
+
+def clean_suggestions(value):
+    if not isinstance(value, list): return []
+    result = []
+    for item in value:
+        if isinstance(item, str) and 1 <= len(item.strip()) <= 60 and item.strip() not in result:
+            result.append(item.strip())
+    return result[:3] if len(result) >= 3 else []
 
 
 def validate(data):
@@ -121,7 +137,7 @@ def counsel(rows):
     turn_prompt = FIRST_TURN if first_turn else FOLLOW_UP+'\n\n'+FOLLOWUP_STYLE
     result = ollama('/api/chat', {
         'model':MODEL,'stream':False,'think':False,'format':SCHEMA if first_turn else FOLLOW_SCHEMA,
-        'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
+        'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n'+SUGGESTION_PROMPT+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
         'options':{'temperature':0.35,'num_ctx':8192,'num_predict':1000}, 'keep_alive':'10m',
     })
     if result.get('done_reason') == 'length': raise ValueError('답변 생성 한도에 도달했습니다. 질문을 짧게 나누어 주세요.')
@@ -131,7 +147,7 @@ def counsel(rows):
         raise ValueError('답변을 완성하지 못했습니다. 다시 시도해 주세요.')
     quote = '\n\n'.join(r['text']+'\n— '+r['book']+' '+r['chapter']+':'+r['verse']+' (개역한글)' for r in chosen)
     reply = ('① 말씀\n'+quote+'\n\n② 해석\n'+answer['interpretation']+'\n\n③ 응답\n'+answer['response']) if first_turn else answer['response'].strip()
-    return {'reply':reply,'model':MODEL,'verses':chosen if first_turn else [],'mode':'template' if first_turn else 'conversation','version':VERSION}
+    return {'reply':reply,'suggestions':clean_suggestions(answer.get('suggestions')),'model':MODEL,'verses':chosen if first_turn else [],'mode':'template' if first_turn else 'conversation','version':VERSION}
 
 
 class Handler(SimpleHTTPRequestHandler):

@@ -45,6 +45,6 @@ def record(conn,day,labels):
 def read(conn,day):
     result={'date':day,'minimum':MIN_COUNT,'topics':[],'keywords':[]}
     for kind,key in (('topic','topics'),('keyword','keywords')):
-        rows=conn.execute('SELECT label FROM daily_trends WHERE day=? AND kind=? AND count>=? ORDER BY count DESC, label ASC LIMIT 7',(day,kind,MIN_COUNT))
+        rows=conn.execute('SELECT label FROM daily_trends WHERE day=? AND kind=? AND count>=? ORDER BY count DESC, label ASC LIMIT 10',(day,kind,MIN_COUNT))
         result[key]=[r[0] for r in rows]
     return result

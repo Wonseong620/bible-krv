@@ -39,7 +39,9 @@ class Quota:
 
     def trends(self):
         with sqlite3.connect(self.path, timeout=1) as conn:
-            return trends.read(conn, self.day().isoformat())
+            result = trends.read(conn, self.day().isoformat())
+            result['updated_at'] = self.clock().astimezone(TIMEZONE).isoformat()
+            return result
 
     def run(self, generate, labels=None):
         # Hold a single writer transaction until generation completes. WAL readers
