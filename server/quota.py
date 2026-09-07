@@ -3,6 +3,10 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+try:
+    from . import trends
+except ImportError:
+    import trends
 
 TIMEZONE = ZoneInfo('Asia/Seoul')
 LIMIT = 100
@@ -19,6 +23,7 @@ class Quota:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(self.path) as conn:
             conn.execute('PRAGMA journal_mode=WAL')
+            trends.initialize(conn)
             conn.execute('CREATE TABLE IF NOT EXISTS daily_responses (day TEXT PRIMARY KEY, completed INTEGER NOT NULL CHECK(completed BETWEEN 0 AND 100))')
 
     def day(self):
@@ -32,7 +37,11 @@ class Quota:
         return {'limit': LIMIT, 'completed': completed, 'remaining': LIMIT-completed,
                 'timezone': 'Asia/Seoul', 'resets_at': datetime.combine(day+timedelta(days=1), datetime.min.time(), TIMEZONE).isoformat()}
 
-    def run(self, generate):
+    def trends(self):
+        with sqlite3.connect(self.path, timeout=1) as conn:
+            return trends.read(conn, self.day().isoformat())
+
+    def run(self, generate, labels=None):
         # Hold a single writer transaction until generation completes. WAL readers
         # (health/status) remain available. Failure or process exit rolls back.
         conn = sqlite3.connect(self.path, timeout=1)
@@ -47,6 +56,8 @@ class Quota:
             conn.execute('INSERT OR IGNORE INTO daily_responses(day, completed) VALUES (?,0)', (day,))
             updated = conn.execute('UPDATE daily_responses SET completed=completed+1 WHERE day=? AND completed<?', (day,LIMIT))
             if updated.rowcount != 1: raise QuotaExceeded()
+            if labels:
+                trends.record(conn, day, labels)
             conn.commit()
             return result
         except BaseException:

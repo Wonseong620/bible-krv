@@ -91,6 +91,7 @@ form.addEventListener('submit', async event => {
     });
     const data = await response.json();
     showQuota(data.quota);
+    if (response.ok) loadTrends();
     if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : '상담에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('답변을 받지 못했습니다. 다시 시도해 주세요.');
     history.push({ role: 'user', content }, { role: 'assistant', content: data.reply });
@@ -146,3 +147,35 @@ copyLink.addEventListener('click', async () => {
     copyStatus.textContent = '자동 복사를 사용할 수 없습니다. 선택된 링크를 직접 복사해 주세요.';
   }
 });
+
+async function loadTrends() {
+  const groups = [['topics', '#top-topics', '#topics-empty'], ['keywords', '#top-keywords', '#keywords-empty']];
+  try {
+    if (!endpoint) throw new Error();
+    const response = await fetch(new URL('/api/trends', new URL(endpoint, location.href)), { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    for (const [key, listSelector, emptySelector] of groups) {
+      if (!Array.isArray(data[key]) || !data[key].every(item => typeof item === 'string')) throw new Error();
+      const list = document.querySelector(listSelector);
+      list.replaceChildren();
+      for (const label of data[key].slice(0, 7)) {
+        const item = document.createElement('li');
+        item.textContent = label;
+        list.append(item);
+      }
+      const empty = document.querySelector(emptySelector);
+      empty.hidden = list.children.length > 0;
+      empty.textContent = '아직 이야기가 모이고 있어요.';
+    }
+  } catch {
+    for (const [, listSelector, emptySelector] of groups) {
+      document.querySelector(listSelector).replaceChildren();
+      const empty = document.querySelector(emptySelector);
+      empty.hidden = false;
+      empty.textContent = '잠시 후 다시 확인해 주세요.';
+    }
+  }
+}
+loadTrends();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadTrends(); });
