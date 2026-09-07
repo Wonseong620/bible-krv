@@ -43,7 +43,7 @@ class StreamingTests(unittest.TestCase):
             try:
                 with patch.object(app,'QUOTA',quota),patch.object(app.Handler,'trusted',return_value=True),patch.object(app,'counsel',side_effect=generate):
                     with urlopen(request()) as response:events=[json.loads(line) for line in response]
-                    self.assertEqual([e['type'] for e in events],['partial','done'])
+                    self.assertEqual([e['type'] for e in events if e['type'] != 'ping'],['partial','done'])
                     self.assertEqual(quota.status()['completed'],1)
                 def fail(rows,emit):
                     emit({'type':'partial','reply':'작성 중'})

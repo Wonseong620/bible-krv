@@ -203,7 +203,9 @@ def counsel(rows, emit=None):
 
 
 class Handler(SimpleHTTPRequestHandler):
-    def __init__(self,*a,**kw): super().__init__(*a,directory=str(ROOT),**kw)
+    def __init__(self,*a,**kw):
+        self.stream_lock = threading.RLock()
+        super().__init__(*a,directory=str(ROOT),**kw)
     def setup(self):
         super().setup()
         self.connection.settimeout(10)
@@ -216,6 +218,10 @@ class Handler(SimpleHTTPRequestHandler):
         if origin in ORIGINS: self.send_header('Access-Control-Allow-Origin',origin)
         super().end_headers()
     def stream_event(self, data):
+        with self.stream_lock:
+            self._stream_event(data)
+
+    def _stream_event(self, data):
         if not getattr(self, 'stream_started', False):
             self.send_response(200)
             self.send_header('Content-Type','application/x-ndjson; charset=utf-8')
@@ -277,8 +283,18 @@ class Handler(SimpleHTTPRequestHandler):
             rows=validate(json.loads(self.rfile.read(size)))
         except (ValueError,UnicodeError,socket.timeout): return self.json(400,{'error':'요청 형식이나 대화 길이를 확인해 주세요. 새 대화를 시작할 수 있습니다.'})
         if not LOCK.acquire(blocking=False): return self.json(429,{'error':'다른 답변을 작성 중입니다. 잠시 후 다시 시도해 주세요.'})
+        heartbeat_stop = threading.Event()
+        heartbeat = None
         try:
             wants_stream = 'application/x-ndjson' in self.headers.get('Accept', '')
+            if wants_stream:
+                self.stream_event({'type':'ping'})
+                def keep_alive():
+                    while not heartbeat_stop.wait(10):
+                        try: self.stream_event({'type':'ping'})
+                        except OSError: return
+                heartbeat = threading.Thread(target=keep_alive,daemon=True)
+                heartbeat.start()
             result = QUOTA.run(lambda: counsel(rows, self.stream_event if wants_stream else None), question=rows[-1]['content'])
             result['quota'] = QUOTA.status()
             self.json(200,result)
@@ -287,7 +303,10 @@ class Handler(SimpleHTTPRequestHandler):
         except sqlite3.Error: self.json(503,{'error':'이용 횟수를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.'})
         except (URLError,TimeoutError,OSError): self.json(503,{'error':'Ollama 연결이 지연되거나 중단되었습니다. 잠시 후 다시 시도해 주세요.'})
         except (ValueError,KeyError,TypeError): self.json(502,{'error':'답변을 완성하지 못했습니다. 다시 시도해 주세요.'})
-        finally: LOCK.release()
+        finally:
+            heartbeat_stop.set()
+            if heartbeat: heartbeat.join(timeout=1)
+            LOCK.release()
 
 if __name__=='__main__':
     print(f'Bible Counsel: http://127.0.0.1:{PORT} | {MODEL}',flush=True)
