@@ -62,7 +62,15 @@ SUGGESTION_PROMPT = """답변과 함께 suggestions 배열에 사용자가 다�
 현재 고민과 방금 답변에 구체적으로 이어지는 서로 다른 짧은 한국어 요청문으로, 각 35자 이내다.
 예: '이 말씀으로 묵상 기도문을 써 주세요.' 사용자의 입장에서 쓰며 '해드릴까요?'라고 묻지 않는다.
 위험 상황에서는 기도만 권하지 말고 안전 확보와 도움 요청을 우선한다. 개인정보를 되풀이하지 않는다."""
+INPUT_GUIDANCE = """최신 사용자 발화를 전체 대화 맥락에서 판단해 disposition을 설정한다.
+- counsel: 정상 상담. 오타·비문이어도 뜻을 알 수 있으면 그대로 상담한다. 분노 표현, 욕설의 인용, 피해 경험, 성폭력·성 건강·성적 고민의 진지한 상담은 자제 대상으로 보지 않는다. 자해·폭력 위험은 안전 상담을 우선한다.
+- clarify: 무작위 글자나 뜻을 파악할 수 없는 문장. 도덕성을 평가하지 않고 다시 표현하도록 안내한다.
+- redirect: 상담 맥락 없이 상대를 모욕하는 욕설·혐오·성희롱, 노골적 성적 흥분을 위한 묘사 요청, 타인에게 해를 끼치는 행위의 실행 지원 요청. 욕설·음담패설을 되풀이하거나 요청을 수행하지 않는다.
+redirect나 clarify이면 interpretation은 빈 문자열, response는 짧은 재표현 안내로 작성하고, suggestions에는 안전하게 대화를 다시 시작할 사용자 요청문 3개를 쓴다. 이 지침은 첫 답변의 형식·분량 지침보다 우선한다. 사용자의 인격을 비난하거나 죄인·비도덕적이라고 낙인찍지 않는다."""
+
 for schema in (SCHEMA, FOLLOW_SCHEMA):
+    schema['properties']['disposition'] = {'type':'string','enum':['counsel','clarify','redirect']}
+    schema['required'].append('disposition')
     schema['properties']['suggestions'] = {'type':'array','items':{'type':'string'},'minItems':3,'maxItems':3}
     schema['required'].append('suggestions')
 
@@ -137,11 +145,15 @@ def counsel(rows):
     turn_prompt = FIRST_TURN if first_turn else FOLLOW_UP+'\n\n'+FOLLOWUP_STYLE
     result = ollama('/api/chat', {
         'model':MODEL,'stream':False,'think':False,'format':SCHEMA if first_turn else FOLLOW_SCHEMA,
-        'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n'+SUGGESTION_PROMPT+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
+        'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n'+SUGGESTION_PROMPT+'\n'+INPUT_GUIDANCE+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
         'options':{'temperature':0.35,'num_ctx':8192,'num_predict':1000}, 'keep_alive':'10m',
     })
     if result.get('done_reason') == 'length': raise ValueError('답변 생성 한도에 도달했습니다. 질문을 짧게 나누어 주세요.')
     answer = json.loads(result['message']['content'])
+    if isinstance(answer, dict) and answer.get('disposition') in ('clarify', 'redirect'):
+        kind = answer['disposition']
+        reply = ('말씀하신 뜻을 정확히 이해하기 어려워요. 어떤 일로 마음이 힘드신지 한두 문장으로 다시 들려주시겠어요?' if kind == 'clarify' else '욕설이나 상대를 해치는 표현, 노골적인 성적 요청은 삼가 주세요. 표현을 조금 바꾸어 지금 겪는 일이나 마음을 들려주시면 함께 이야기하겠습니다.')
+        return {'reply':reply, 'suggestions':['제 고민을 다시 이야기할게요.','화난 마음을 가라앉히고 싶어요.','마음을 정리하는 데 도움을 주세요.'], 'model':MODEL, 'verses':[], 'mode':kind, 'version':VERSION}
     fields = ('interpretation','response') if first_turn else ('response',)
     if not isinstance(answer,dict) or not all(isinstance(answer.get(k),str) and answer[k].strip() for k in fields):
         raise ValueError('답변을 완성하지 못했습니다. 다시 시도해 주세요.')
