@@ -25,3 +25,4 @@ footer .version{flex-basis:100%;text-align:center}
 .live-label:before{display:inline-block;animation:live-pulse 3s ease-in-out infinite}
 @keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.25}}
 @media(prefers-reduced-motion:reduce){.live-label:before{animation:none;opacity:1}}
+.live-label:before{color:#df842f}
