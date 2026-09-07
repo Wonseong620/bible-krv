@@ -8,3 +8,6 @@
 .typing-dots span:nth-child(3){animation-delay:.3s}
 @keyframes typing-dot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
 @media(prefers-reduced-motion:reduce){.typing-dots span{animation:none;opacity:1}}
+
+footer{flex-wrap:wrap;row-gap:12px}
+footer .version{flex-basis:100%;text-align:center}
