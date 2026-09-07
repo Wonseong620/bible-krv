@@ -45,7 +45,7 @@ SYSTEM = '''너는 한국어 성경 고민상담 도우미 '말씀 곁에'다. �
 자해·학대·즉각적인 위험이면 안전 확보와 가까운 사람·현지 긴급 지원 연결을 최우선으로 안내한다.
 학대 피해자에게 화해나 인내를 강요하지 않는다. 진단·투자 추천·약물 중단 지시를 하지 않는다.'''
 FIRST_TURN = '''첫 상담 답변이다. JSON의 interpretation(해석), response(응답) 문자열과 suggestions 배열로 답한다.
-각 항목은 2~4문장이다. 말씀 → 해석 → 응답 형식은 서버가 조립한다.'''
+각 항목은 보통 3~5문장이다. 기존의 간결한 답변보다 약 30% 더 충분히 풀어 쓴다. 구체적인 의미나 실천 예시를 보태되 같은 말을 반복해 길이를 늘리지 않는다. 말씀 → 해석 → 응답 형식은 서버가 조립한다.'''
 FOLLOW_UP = '''이미 대화를 나누고 있는 후속 상담이다. JSON의 response 문자열과 suggestions 배열로 답한다.
 자상하고 긍정적인 목사님의 목회적 말투를 참고하되, 실제 목사나 사람이라고 주장하지 않는다.
 차분한 존댓말과 자연스러운 대화체로 이전 이야기와 사용자의 최신 말에 구체적으로 반응한다.
@@ -55,7 +55,7 @@ FOLLOW_UP = '''이미 대화를 나누고 있는 후속 상담이다. JSON의 re
 단순 공감·일상 대화에는 장절을 억지로 넣지 않는다. 별도의 근거 목록이나 설교식 소제목을 만들지 않는다.
 감정을 먼저 헤아리고 현실적인 격려와 작은 제안을 건넨다. 무조건 괜찮아질 것이라고 보장하지 않는다.
 이전 답변을 반복하거나 훈계하지 않는다. 필요할 때만 부담 없는 질문 하나로 이어 간다.
-보통 3~6문장, 1~3개의 짧은 문단으로 답하며 사용자가 자세한 설명을 원하면 조절한다.'''
+보통 4~8문장, 2~3개의 짧은 문단으로 답한다. 기존의 간결한 답변보다 약 30% 더 충분히 풀어 쓰되 반복 대신 상황에 맞는 설명이나 작은 실천 예시를 보탠다. 사용자가 짧게 답해 달라고 하면 그 요청을 우선하고, 단순한 인사나 확인에 분량을 억지로 채우지 않는다.'''
 FOLLOW_SCHEMA = {'type':'object','properties':{'response':{'type':'string'}},'required':['response'],'additionalProperties':False}
 SCHEMA = {'type':'object','properties':{'interpretation':{'type':'string'},'response':{'type':'string'}},'required':['interpretation','response'],'additionalProperties':False}
 
@@ -147,7 +147,7 @@ def counsel(rows):
     result = ollama('/api/chat', {
         'model':MODEL,'stream':False,'think':False,'format':SCHEMA if first_turn else FOLLOW_SCHEMA,
         'messages':[{'role':'system','content':SYSTEM+'\n'+turn_prompt+'\n'+SUGGESTION_PROMPT+'\n'+INPUT_GUIDANCE+'\n\n검증된 개역한글 본문과 전후 문맥:\n'+context}] + rows,
-        'options':{'temperature':0.35,'num_ctx':8192,'num_predict':1000}, 'keep_alive':'10m',
+        'options':{'temperature':0.35,'num_ctx':8192,'num_predict':1300}, 'keep_alive':'10m',
     })
     if result.get('done_reason') == 'length': raise ValueError('답변 생성 한도에 도달했습니다. 질문을 짧게 나누어 주세요.')
     answer = json.loads(result['message']['content'])
