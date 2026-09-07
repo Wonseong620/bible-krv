@@ -46,6 +46,10 @@
   </details>
 </header>
 <div class="app-layout">
+    <section class="top-concerns" aria-labelledby="today-title">
+      <div class="trends-heading"><h2 id="today-title">오늘의 TOP 고민</h2><span class="live-label">LIVE</span><time id="trends-updated"></time></div>
+      <ol id="top-keywords" class="rank-list"></ol><p id="keywords-empty" class="rank-empty">오늘의 고민을 불러오고 있어요.</p>
+    </section>
 <main class="workspace">
   <div class="room-meta"><span>마음을 나누는 자리</span><span class="availability" id="availability">상담 연결 준비 중</span></div>
   <section class="conversation" aria-label="성경 상담">
@@ -61,10 +65,7 @@
   <div class="composer-area">
     <p id="quota" class="feedback">하루 총 100회 응답</p>
     <p id="feedback" class="feedback" role="status">상담 서비스는 준비 중입니다. 연결이 완료되면 이곳에서 대화할 수 있습니다.</p>
-    <section class="top-concerns" aria-labelledby="today-title">
-      <div class="trends-heading"><h2 id="today-title">오늘의 TOP 고민</h2><span class="live-label">LIVE</span><time id="trends-updated"></time></div>
-      <ol id="top-keywords" class="rank-list"></ol><p id="keywords-empty" class="rank-empty">오늘의 고민을 불러오고 있어요.</p>
-    </section>
+
     <section class="question-box" aria-label="추천 질문">
       <div class="question-heading"><span id="suggestion-title">이런 이야기로 시작해 보세요</span><button id="shuffle-questions" type="button">다른 질문 ↻</button></div>
       <div id="suggestions" class="suggestions"></div>
