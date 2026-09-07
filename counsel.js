@@ -12,7 +12,7 @@ let history = [];
 let busy = false;
 function showQuota(quota) {
   if (!quota || !Number.isInteger(quota.remaining)) return;
-  document.querySelector('#quota').textContent = `오늘 남은 응답 ${quota.remaining} / 100회 · 전체 이용자 합산 · 한국시간 자정 갱신`;
+  document.querySelector('#quota').textContent = `오늘 남은 응답 ${quota.remaining} / 100회`;
 }
 if (endpoint) {
   feedback.textContent = '상담 연결을 확인하고 있습니다…';
@@ -23,8 +23,8 @@ if (endpoint) {
       showQuota(data.quota);
       document.querySelector('#availability').textContent = '상담 가능';
       document.querySelector('#availability').classList.add('online');
-      feedback.textContent = '나누고 싶은 이야기를 적어 주세요.';
-    }).catch(() => { feedback.textContent = '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'; });
+      if (!busy) feedback.textContent = '나누고 싶은 이야기를 적어 주세요.';
+    }).catch(() => { if (!busy) feedback.textContent = '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'; });
 }
 document.querySelectorAll('[data-prompt]').forEach(button => button.addEventListener('click', () => {
   input.value = button.dataset.prompt;
@@ -70,7 +70,17 @@ form.addEventListener('submit', async event => {
   reset.hidden = true;
   welcome.hidden = true;
   const userMessage = appendMessage('user', content);
-  feedback.textContent = '이야기를 읽고 말씀을 살펴보고 있습니다…';
+  feedback.textContent = '답변을 생성하고 있습니다';
+  const dots = document.createElement('span');
+  dots.className = 'typing-dots';
+  dots.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 3; i++) {
+    const dot = document.createElement('span');
+    dot.textContent = '.';
+    dots.append(dot);
+  }
+  feedback.append(dots);
+  form.setAttribute('aria-busy', 'true');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 165000);
   try {
@@ -98,6 +108,7 @@ form.addEventListener('submit', async event => {
   } finally {
     clearTimeout(timeout);
     busy = false;
+    form.removeAttribute('aria-busy');
     send.disabled = false;
     input.readOnly = false;
     reset.hidden = history.length === 0;
@@ -113,4 +124,25 @@ reset.addEventListener('click', () => {
   input.value = '';
   feedback.textContent = '새로운 이야기를 나눠 주세요.';
   input.focus();
+});
+
+const copyLink = document.querySelector('#copy-link');
+const copyStatus = document.querySelector('#copy-status');
+const shareUrl = document.querySelector('#share-url');
+let copyTimer;
+copyLink.addEventListener('click', async () => {
+  clearTimeout(copyTimer);
+  try {
+    await navigator.clipboard.writeText(shareUrl.value);
+    shareUrl.hidden = true;
+    copyLink.textContent = '복사 완료';
+    copyStatus.textContent = '공유 링크를 복사했습니다.';
+    copyTimer = setTimeout(() => { copyLink.textContent = '링크 복사'; }, 2500);
+  } catch {
+    copyLink.textContent = '링크 복사';
+    shareUrl.hidden = false;
+    shareUrl.focus();
+    shareUrl.select();
+    copyStatus.textContent = '자동 복사를 사용할 수 없습니다. 선택된 링크를 직접 복사해 주세요.';
+  }
 });

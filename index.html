@@ -62,7 +62,7 @@
     <div id="messages" class="messages" role="log" aria-label="대화 내용" aria-live="polite" aria-relevant="additions text"></div>
   </section>
   <div class="composer-area">
-    <p id="quota" class="feedback">하루 총 100회 응답 · 전체 이용자 합산 · 한국시간 자정 갱신</p>
+    <p id="quota" class="feedback">하루 총 100회 응답</p>
     <p id="feedback" class="feedback" role="status">상담 서비스는 준비 중입니다. 연결이 완료되면 이곳에서 대화할 수 있습니다.</p>
     <form id="chat-form" class="composer">
       <label class="sr-only" for="message">나누고 싶은 고민</label>
@@ -73,6 +73,6 @@
     <button id="reset" class="reset" type="button" hidden>대화 지우고 새로 시작</button>
   </div>
 </main>
-<footer><span>성경 개역한글판과 함께합니다.</span><details class="share"><summary>이 페이지 나누기 ↗</summary><div><img src="qr.png" width="126" height="126" alt="현재 공개 페이지 QR 코드"><a href="qr.png" download="개역한글판_QR.png">QR 이미지 내려받기</a></div></details></footer>
+<footer><span>성경 개역한글판과 함께합니다.</span><div class="share"><button id="copy-link" type="button">링크 복사</button><span id="copy-status" class="sr-only" role="status"></span><input id="share-url" aria-label="공유 링크" readonly value="https://wonseong620.github.io/bible-krv/" hidden></div></footer>
 </body>
 </html>
