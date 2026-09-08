@@ -41,7 +41,7 @@ def publish(url):
     for attempt in range(1, 7):
         if stop.is_set(): return
         try:
-            with urlopen(url+'/api/health', timeout=10) as response:
+            with urlopen('http://127.0.0.1:8765/api/health', timeout=10) as response:
                 json.load(response)
             path = ROOT/'counsel-config.js'
             old = path.read_text()
@@ -52,6 +52,7 @@ def publish(url):
                 temporary.replace(path)
             def git(*args):
                 subprocess.run(['/usr/bin/git',*args],cwd=ROOT,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=90)
+            git('pull','--rebase','--autostash','origin','master')
             changed = subprocess.run(['/usr/bin/git','diff','HEAD','--quiet','--','counsel-config.js'],cwd=ROOT).returncode
             if changed:
                 git('-c','user.name=Wonseong620','-c','user.email=kindws@gmail.com','commit','--only','-m','Refresh supervised public tunnel endpoint','--','counsel-config.js')
