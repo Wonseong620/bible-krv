@@ -3,5 +3,5 @@
 window.COUNSEL_CONFIG = {
   endpoint: ['127.0.0.1', 'localhost'].includes(location.hostname)
     ? '/api/chat'
-    : 'https://silver-slight-reaction-know.trycloudflare.com/api/chat',
+    : 'https://assigned-mariah-circumstances-operator.trycloudflare.com/api/chat',
 };
