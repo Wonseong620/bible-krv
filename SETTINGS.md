@@ -66,3 +66,15 @@
 - 원문 보관·일일 횟수는 최종 성공 때만 커밋한다. 연결 종료 시점에 따라 이미 완료된 응답은 차감될 수 있다.
 - 구형 클라이언트는 기존 JSON 응답 유지. 최근 최대 9개 대화 쌍, 약 18,000자까지 프런트에서 전달한다.
 - 16,384 문맥은 로컬 Qwen 시험 후 적용. 실제 전달 범위는 메시지 길이와 토큰화에 따라 달라진다.
+
+## macOS 자동 복구 운영
+
+- LaunchAgent `kr.bible-counsel.supervisor`가 로그인 시 실행되고 종료 시 launchd가 재실행한다.
+- Documents 접근 제한을 피하도록 실제 운영 체크아웃은 `~/Library/Application Support/BibleCounsel/runtime`에 둔다.
+- supervisor가 상담 서버·임시 터널 종료 코드와 실행 시간을 기록하고 5초 후 재시작한다.
+- 로그: `~/Library/Application Support/BibleCounsel/lifecycle.log`, 파일당 2MB, 이전 5개 보관.
+- 상담 원문과 임의의 오류 본문은 로그에 쓰지 않는다. 오류 발생 여부·종료 코드만 남긴다.
+- 터널 주소 변경 시 counsel-config.js만 커밋하여 master에 푸시한다. 인증·충돌·네트워크 오류는 로그에 기록한다.
+- 설정 파일: `~/Library/LaunchAgents/kr.bible-counsel.supervisor.plist`.
+- 이후 서버 코드 변경 시 운영 체크아웃에도 반영해야 한다. Documents의 소스 수정만으로 실행 중 코드가 바뀌지 않는다.
+- 로그인 전·로그아웃·절전·전원 종료 동안 가용성을 보장하지 않는다. Ollama 앱은 별도로 실행되어야 한다.

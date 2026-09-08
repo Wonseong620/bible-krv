@@ -17,7 +17,7 @@ cloudflared tunnel --url http://127.0.0.1:8765 --http-host-header 127.0.0.1:8765
 터널을 다시 시작하면 주소가 달라진다. 새 HTTPS 주소로 `counsel-config.js`를 수정하고
 GitHub Pages에 다시 배포해야 한다. 고정 운영에는 도메인과 이름이 있는 터널이 필요하다.
 컴퓨터·Ollama·상담 서버·터널이 켜져 있고 절전하지 않아야 응답한다.
-현재 프로세스는 재부팅 시 자동으로 시작하지 않는다.
+상담 서버와 터널은 macOS LaunchAgent로 로그인 시 실행하며, 종료 시 자동 복구한다. 운영 폴더와 로그는 SETTINGS.md 참조.
 
 공개 브라우저 Origin은 `https://wonseong620.github.io`만 허용한다. 같은 출처의 다른 경로도
 동일 Origin이다. CORS는 사용자 인증이 아니며 API는 공개 서비스다.
