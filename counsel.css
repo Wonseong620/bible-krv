@@ -38,3 +38,10 @@ footer .version{flex-basis:100%;text-align:center}
 
 .privacy{font-size:calc(12px - 2pt)}
 .message.assistant{scroll-margin-top:24px}
+#install-app{margin-right:16px}
+#install-help{width:min(420px,calc(100% - 40px));padding:24px;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--ink)}
+#install-help::backdrop{background:#0006}
+#install-help h2{font:500 20px var(--serif);margin:0 0 16px}
+#install-help p{font-size:14px;line-height:1.9}
+#install-help form{text-align:right}
+#install-help button{padding:8px 20px;border:0;border-radius:8px;background:var(--pine);color:white;min-height:44px}
