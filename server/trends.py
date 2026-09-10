@@ -67,11 +67,11 @@ def record(conn, completed_at, question, reply):
 def read(conn, day):
     # Derive fixed-vocabulary counts in memory. Never persist labels or expose text.
     counts = {'topic':{}, 'keyword':{}}
-    for (question,) in conn.execute('SELECT question FROM recent_exchanges ORDER BY id DESC LIMIT 100'):
+    for (question,) in conn.execute('SELECT question FROM recent_exchanges ORDER BY id DESC LIMIT 20'):
         for kind, labels in classify(question).items():
             for label in labels:
                 counts[kind][label] = counts[kind].get(label, 0) + 1
-    result = {'date':day, 'minimum':MIN_COUNT, 'window':100, 'topics':[], 'keywords':[]}
+    result = {'date':day, 'minimum':MIN_COUNT, 'window':20, 'topics':[], 'keywords':[]}
     for kind,key in (('topic','topics'),('keyword','keywords')):
         result[key] = [label for label,count in sorted(counts[kind].items(),key=lambda item:(-item[1],item[0])) if count >= MIN_COUNT][:10]
     return result

@@ -64,3 +64,14 @@ class TrendsTests(unittest.TestCase):
         self.assertIn('비교심리',labels)
         self.assertIn('불안심리',labels)
         self.assertNotIn('소통문제',classify('오늘 좋은 대화를 나눴어요')['keyword'])
+
+    def test_ranking_uses_only_latest_twenty(self):
+        for _ in range(5): self.add('취업 걱정')
+        for _ in range(20): self.add('가족 걱정')
+        result = self.q.trends()
+        self.assertEqual(result['window'], 20)
+        self.assertNotIn('취업부담', result['keywords'])
+        self.assertIn('가족관계', result['keywords'])
+        self.assertEqual(self.q.status()['limit'], 100)
+        with sqlite3.connect(self.path) as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM recent_exchanges').fetchone()[0], 25)
