@@ -24,7 +24,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL = os.environ.get('COUNSEL_MODEL', 'qwen3:14b')
-VERSION = '2.1'
+VERSION = '3.0'
 FOLLOWUP_STYLE = (ROOT / 'server/prompts/followup-style.md').read_text(encoding='utf-8')
 OLLAMA = 'http://127.0.0.1:11434'
 PORT = int(os.environ.get('COUNSEL_PORT', '8765'))

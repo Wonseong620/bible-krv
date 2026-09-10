@@ -22,7 +22,7 @@ class ConversationTests(unittest.TestCase):
             follow=counsel(rows)
             self.assertEqual(follow['mode'],'conversation')
             self.assertEqual(len(follow['suggestions']),3)
-            self.assertEqual(follow['version'],'2.1')
+            self.assertEqual(follow['version'],'3.0')
             self.assertIn('humanize-korean',calls[-1]['messages'][0]['content'])
             self.assertIn('AI 상담 도우미임을 정직하게',calls[-1]['messages'][0]['content'])
             self.assertNotIn('① 말씀',follow['reply'])

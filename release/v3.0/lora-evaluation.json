@@ -1,0 +1,32 @@
+{
+  "trained": true,
+  "examples": 58,
+  "iterations": 58,
+  "trainable_parameters": 1048576,
+  "changed_tensors": 32,
+  "adapter_sha256": "224ab40efdc5b1d080c337e10c6ca2ffa0a29360acb13391b081cbe561328119",
+  "evaluation_pairs": 12,
+  "preferences": {
+    "neither": 4,
+    "baseline": 4,
+    "lora": 3,
+    "tie": 1
+  },
+  "lora_critical_cases": [
+    "H09"
+  ],
+  "generation": {
+    "baseline": {
+      "json_errors": 0,
+      "median_seconds": 25.68
+    },
+    "lora": {
+      "json_errors": 3,
+      "median_seconds": 23.98
+    }
+  },
+  "screen_passed": false,
+  "production_model": "qwen3:14b (original)",
+  "lora_deployed": false,
+  "independent_expert_review": false
+}
