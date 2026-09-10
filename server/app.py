@@ -28,6 +28,8 @@ VERSION = '2.1'
 FOLLOWUP_STYLE = (ROOT / 'server/prompts/followup-style.md').read_text(encoding='utf-8')
 OLLAMA = 'http://127.0.0.1:11434'
 PORT = int(os.environ.get('COUNSEL_PORT', '8765'))
+MAINTENANCE_FILE = Path(os.environ.get('COUNSEL_MAINTENANCE_FILE', str(Path.home() / '.local/share/bible-counsel/maintenance.flag')))
+MAINTENANCE_MESSAGE = '상담 서비스를 잠시 점검하고 있습니다. 점검이 끝나면 다시 이용해 주세요.'
 LOCK = threading.BoundedSemaphore(1)
 QUOTA = Quota(os.environ.get('COUNSEL_QUOTA_DB', str(Path.home() / '.local/share/bible-counsel/quota.sqlite3')))
 ORIGINS = {'https://wonseong620.github.io', f'http://127.0.0.1:{PORT}', f'http://localhost:{PORT}'}
@@ -281,6 +283,8 @@ class Handler(SimpleHTTPRequestHandler):
             try: return self.json(200,QUOTA.trends())
             except sqlite3.Error: return self.json(503,{'error':'주제를 불러오지 못했습니다.'})
         if path=='/api/health':
+            if MAINTENANCE_FILE.exists():
+                return self.json(503,{'ready':False,'maintenance':True,'error':MAINTENANCE_MESSAGE,'version':VERSION})
             try:
                 installed=ollama('/api/tags',timeout=3).get('models',[])
                 ready=any(m['name']==MODEL for m in installed)
@@ -305,6 +309,8 @@ class Handler(SimpleHTTPRequestHandler):
         # Immediate safety guidance must also work when generation is busy or quota is exhausted.
         kind = safety.route(rows)
         if kind in safety.EMERGENCY: return self.json(200, fixed_result(kind))
+        if MAINTENANCE_FILE.exists():
+            return self.json(503,{'maintenance':True,'error':MAINTENANCE_MESSAGE})
         if not LOCK.acquire(blocking=False): return self.json(429,{'error':'다른 답변을 작성 중입니다. 잠시 후 다시 시도해 주세요.'})
         heartbeat_stop = threading.Event()
         heartbeat = None

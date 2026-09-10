@@ -11,21 +11,43 @@ const downloads = document.querySelector('#downloads');
 const endpoint = window.COUNSEL_CONFIG?.endpoint || '';
 let history = [];
 let busy = false;
+let availabilityState = null;
 function showQuota(quota) {
   if (!quota || !Number.isInteger(quota.remaining)) return;
   document.querySelector('#quota').textContent = `오늘 남은 응답 ${quota.remaining} / 100회`;
 }
-if (endpoint) {
-  feedback.textContent = '상담 연결을 확인하고 있습니다…';
+function refreshAvailability() {
+  if (!endpoint || busy) return;
   fetch(new URL('/api/health', new URL(endpoint, location.href)), { signal: AbortSignal.timeout(10000) })
-    .then(response => response.ok ? response.json() : Promise.reject())
+    .then(response => response.json())
     .then(data => {
+      if (busy) return;
+      if (data.maintenance) {
+        availabilityState = 'maintenance';
+        document.querySelector('#availability').textContent = '점검 중';
+        document.querySelector('#availability').classList.remove('online');
+        feedback.textContent = data.error || '상담 서비스를 잠시 점검하고 있습니다.';
+        return;
+      }
       if (!data.ready) throw new Error();
+      const changed = availabilityState !== 'ready';
+      availabilityState = 'ready';
       showQuota(data.quota);
       document.querySelector('#availability').textContent = '상담 가능';
       document.querySelector('#availability').classList.add('online');
-      if (!busy) feedback.textContent = '';
-    }).catch(() => { if (!busy) feedback.textContent = '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'; });
+      if (changed && !busy) feedback.textContent = '';
+    }).catch(() => {
+      if (busy) return;
+      availabilityState = 'offline';
+      document.querySelector('#availability').textContent = '연결 확인 필요';
+      document.querySelector('#availability').classList.remove('online');
+      feedback.textContent = '상담 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+    });
+}
+if (endpoint) {
+  feedback.textContent = '상담 연결을 확인하고 있습니다…';
+  refreshAvailability();
+  setInterval(refreshAvailability, 60000);
 }
 document.addEventListener('click', event => {
   if (!downloads.contains(event.target)) downloads.open = false;
