@@ -353,7 +353,6 @@ async function loadTrends() {
     const data = await response.json();
     if (!Array.isArray(data.keywords) || !data.keywords.every(item => typeof item === 'string')) throw new Error();
     list.replaceChildren();
-  list.classList.toggle('is-starter', !followup);
     for (const label of data.keywords.slice(0, 9)) {
       const item = document.createElement('li'); item.textContent = label;
       item.style.setProperty('--rank-index', list.children.length); list.append(item);
