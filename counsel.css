@@ -45,3 +45,7 @@ footer .version{flex-basis:100%;text-align:center}
 #install-help p{font-size:14px;line-height:1.9}
 #install-help form{text-align:right}
 #install-help button{padding:8px 20px;border:0;border-radius:8px;background:var(--pine);color:white;min-height:44px}
+
+/* Full-length starter questions: three vertically stacked choices. */
+.suggestions.is-starter{grid-template-columns:minmax(0,1fr);gap:8px}
+.suggestions.is-starter button{width:100%;min-width:0;justify-content:flex-start;text-align:left;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.65;border-radius:12px;padding:12px 16px}
